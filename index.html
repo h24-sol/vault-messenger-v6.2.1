@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault v6.2 | Desktop Build</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&display=swap" rel="stylesheet">
+    <style>
+        body { background: #020617; font-family: 'Outfit', sans-serif; color: #f1f5f9; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
+        .glass { background: rgba(15, 23, 42, 0.9); border: 1px solid #1e293b; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .privacy-blur { filter: blur(40px); transition: 0.3s; }
+        #timer { height: 100%; background: #22d3ee; width: 0%; transition: width 30s linear; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="appContainer" class="w-full max-w-lg glass rounded-[2.5rem] p-8 relative overflow-hidden">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-black italic text-cyan-400 uppercase tracking-tighter">Vault v6.2</h1>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.4em] mt-1">Sovereign Master Build</p>
+        </header>
+
+        <div class="space-y-4 mb-6">
+            <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                <label class="text-[9px] text-cyan-500 font-bold uppercase block mb-1">Quantum Key</label>
+                <input type="password" id="vaultKey" value="1600" class="bg-transparent w-full font-bold text-white outline-none text-lg">
+            </div>
+
+            <label class="block w-full bg-slate-900/50 border border-dashed border-slate-700 p-4 rounded-2xl text-center cursor-pointer hover:border-cyan-500/50 transition-all">
+                <span id="fileLabel" class="text-xs font-bold text-slate-400 uppercase">📎 Click to Attach Image</span>
+                <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="handleImg(this)">
+            </label>
+        </div>
+
+        <div id="imgPreview" class="hidden mb-6 rounded-2xl overflow-hidden border border-slate-800 shadow-xl">
+            <img id="preview" src="" class="w-full h-auto">
+        </div>
+
+        <textarea id="msgInput" placeholder="Enter message or paste cipher..." class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-5 h-32 outline-none text-sm mb-6 focus:border-cyan-500/30 transition-all resize-none"></textarea>
+
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <button onclick="run('enc')" class="bg-cyan-500 text-black font-black py-4 rounded-2xl hover:bg-cyan-400 transition-colors">ENCRYPT</button>
+            <button onclick="run('dec')" class="bg-slate-800 text-white font-black py-4 rounded-2xl border border-slate-700 hover:bg-slate-700 transition-colors">DECRYPT</button>
+        </div>
+
+        <div id="resArea" class="hidden bg-cyan-500/5 border border-cyan-500/20 rounded-2xl p-6 relative">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Output</span>
+                <button onclick="copyText()" class="text-[10px] bg-white text-black px-3 py-1 rounded-full font-bold">COPY</button>
+            </div>
+            <div id="resText" class="text-sm break-all text-white font-mono leading-relaxed mb-4"></div>
+            <div class="h-1 bg-slate-800 rounded-full overflow-hidden">
+                <div id="timer"></div>
+            </div>
+        </div>
+
+        <footer class="mt-10 text-center border-t border-slate-900 pt-6 opacity-40">
+            <p class="text-[10px] font-bold tracking-widest uppercase">manis.programmer@gmail.com</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentImgBase64 = "";
+        let burnTimer;
+
+        // 1. IMAGE HANDLING
+        function handleImg(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentImgBase64 = e.target.result;
+                    document.getElementById('preview').src = currentImgBase64;
+                    document.getElementById('imgPreview').classList.remove('hidden');
+                    document.getElementById('fileLabel').innerText = "✅ IMAGE ATTACHED";
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // 2. CORE ENCRYPTION ENGINE
+        function run(mode) {
+            const input = document.getElementById('msgInput');
+            const key = document.getElementById('vaultKey').value;
+            const resArea = document.getElementById('resArea');
+            const resText = document.getElementById('resText');
+            const bar = document.getElementById('timer');
+
+            if (!key) { alert("Enter a key!"); return; }
+
+            // Calculate shift based on key characters
+            let shift = 0;
+            for(let i=0; i<key.length; i++) shift += key.charCodeAt(i);
+            if(mode === 'dec') shift = -shift;
+
+            let source = currentImgBase64 || input.value;
+            if(!source) { alert("Nothing to process!"); return; }
+
+            // Encryption Loop
+            let result = "";
+            for (let i = 0; i < source.length; i++) {
+                result += String.fromCharCode(source.charCodeAt(i) + (shift % 65535));
+            }
+
+            // Display
+            if (mode === 'dec' && result.startsWith('data:image')) {
+                resText.innerHTML = `<img src="${result}" class="rounded-lg w-full">`;
+            } else {
+                resText.innerText = result;
+            }
+
+            resArea.classList.remove('hidden');
+
+            // 3. SOVEREIGN PURGE (30s)
+            clearTimeout(burnTimer);
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            
+            setTimeout(() => {
+                bar.style.transition = 'width 30s linear';
+                bar.style.width = '100%';
+            }, 10);
+
+            burnTimer = setTimeout(() => {
+                resArea.classList.add('hidden');
+                resText.innerText = "";
+                input.value = "";
+                // Reset image
+                currentImgBase64 = "";
+                document.getElementById('imgInput').value = "";
+                document.getElementById('imgPreview').classList.add('hidden');
+                document.getElementById('fileLabel').innerText = "📎 Click to Attach Image";
+            }, 30000);
+        }
+
+        function copyText() {
+            const text = document.getElementById('resText').innerText;
+            if (text) {
+                navigator.clipboard.writeText(text);
+                alert("Cipher copied!");
+            }
+        }
+
+        // 4. ANTI-SNOOP BLUR
+        window.onblur = () => document.getElementById('appContainer').classList.add('privacy-blur');
+        window.onfocus = () => document.getElementById('appContainer').classList.remove('privacy-blur');
+    </script>
+</body>
+</html>
